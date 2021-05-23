@@ -1,12 +1,10 @@
+import 'package:contacts/commonWidget/commons.dart';
 import 'package:contacts/model/contact_model.dart';
+import 'package:contacts/services/contactServices.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'package:http_parser/http_parser.dart';
 
-import 'package:path/path.dart';
-import 'package:async/async.dart';
+
+
 import 'contactCreatePage.dart';
 
 class ContactDetailPage extends StatefulWidget {
@@ -19,7 +17,9 @@ class ContactDetailPage extends StatefulWidget {
 }
 
 class _ContactDetailPageState extends State<ContactDetailPage> {
+  CommonWidgets commonWidgets = CommonWidgets();
   double height, width;
+  ContactServices contactServices = ContactServices();
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +106,7 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                                   child: Text(
                                     widget.contact.name,
                                     textAlign: TextAlign.start,
-                                    style: TextStyle(fontSize: 19),
+                                    style: TextStyle(fontSize: 16),
                                   ),
                                 ),
                               ],
@@ -125,7 +125,7 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                                   child: Text(
                                     widget.contact.num.toString(),
                                     textAlign: TextAlign.start,
-                                    style: TextStyle(fontSize: 19),
+                                    style: TextStyle(fontSize: 16),
                                   ),
                                 )
                               ],
@@ -144,7 +144,7 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                                   child: Text(
                                     widget.contact.email,
                                     textAlign: TextAlign.start,
-                                    style: TextStyle(fontSize: 19),
+                                    style: TextStyle(fontSize: 16),
                                   ),
                                 )
                               ],
@@ -167,76 +167,28 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
     );
   }
 
-  deleteContact(Contact contact) async {
-    Map<String, String> headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-    var fieldDeleturl =
-        Uri.parse('http://10.0.2.2:1337/contacts/${contact.id}');
-
-    if (contact.avatar == null) {
-      var response = await http.delete(fieldDeleturl, headers: headers);
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        print('Request failed with status: ${response.statusCode}.');
-
-        return false;
-      }
-    } else {
-      var imagedeleteUrl =
-          Uri.parse('http://10.0.2.2:1337/upload/files/${contact.avatar.id}');
-      var deleteImageResponse =
-          await http.delete(imagedeleteUrl, headers: headers);
-      if (deleteImageResponse.statusCode == 200) {
-        print("silme başarılı");
-        var response = await http.delete(fieldDeleturl, headers: headers);
-        print("ontapped bottom ");
-        if (response.statusCode == 200) {
-          return true;
-        } else {
-          print('Request failed with status: ${response.statusCode}.');
-
-          return false;
-        }
-      } else {
-        print("image deletesorun olustu");
-        print(deleteImageResponse.statusCode);
-        return false;
-      }
-    }
-  }
-
   Widget _simplePopup(BuildContext context) => PopupMenuButton<int>(
         onSelected: (value) async {
           if (value == 1) {
-            var data = await deleteContact(widget.contact);
+            var data = await contactServices.deleteContact(widget.contact);
 
             if (data == true) {
-              Fluttertoast.showToast(
-                  msg: "Tebrikler ürün başarıyla Silindi",
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                  timeInSecForIosWeb: 4,
-                  backgroundColor: Colors.green[700],
-                  textColor: Colors.white,
-                  fontSize: 16.0);
+              commonWidgets.customToast(
+                  "Congratulations contact successfully deleted",
+                  Colors.greenAccent[700]);
+
               await Future.delayed(Duration(milliseconds: 450));
               Navigator.of(context).pop(true);
             } else {
-              Fluttertoast.showToast(
-                  msg: "Silerken hata oluştu",
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                  timeInSecForIosWeb: 4,
-                  backgroundColor: Colors.redAccent[700],
-                  textColor: Colors.white,
-                  fontSize: 16.0);
+              commonWidgets.customToast(
+                  "Error occurred while deleting", Colors.redAccent[700]);
             }
           } else if (value == 2) {
-            Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => ContactCreatePage(fromUpdate: true,contact: widget.contact,)));
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => ContactCreatePage(
+                      fromUpdate: true,
+                      contact: widget.contact,
+                    )));
           }
         },
         tooltip: "Engelleme ve Destek alma",

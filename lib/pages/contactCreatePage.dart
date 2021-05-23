@@ -1,19 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
-
+import 'package:contacts/commonWidget/commons.dart';
 import 'package:contacts/model/contact_model.dart';
+import 'package:contacts/services/contactServices.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import 'package:path/path.dart';
-import 'package:async/async.dart';
-
-const SERVERURL = 'http://10.0.2.2:1337';
 
 class ContactCreatePage extends StatefulWidget {
   final bool fromUpdate;
@@ -29,6 +19,9 @@ class _ContactCreatePageState extends State<ContactCreatePage> {
   TextEditingController controllerContactName = TextEditingController();
   TextEditingController controllerContactNumber = TextEditingController();
   TextEditingController controllerContactEmail = TextEditingController();
+  ContactServices contactServices = ContactServices();
+  CommonWidgets commonWidgets = CommonWidgets();
+
   File _image;
   double height, width;
 
@@ -110,36 +103,13 @@ class _ContactCreatePageState extends State<ContactCreatePage> {
                         });
                   },
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(70),
-                    child: _image == null
-                        ? Container(
-                            height: 120,
-                            width: 120,
-                            color: Colors.lightBlueAccent,
-                            child: widget.fromUpdate &&
-                                    widget.contact.avatar != null
-                                ? Image.network(
-                                    "http://10.0.2.2:1337/uploads/" +
-                                        widget.contact.avatar.hash +
-                                        ".jpg",
-                                    height: 120,
-                                    width: 120,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                    size: 50,
-                                  ),
-                          )
-                        : Image(
-                            height: 120,
-                            width: 120,
-                            fit: BoxFit.cover,
-                            image: imageWidgetAta()
-                            // : FileImage(_image),
-                            ),
-                  ),
+                      borderRadius: BorderRadius.circular(70),
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        color: Colors.lightBlueAccent,
+                        child: imageWidgetAta(),
+                      )),
                 ),
               ),
               Padding(
@@ -177,63 +147,112 @@ class _ContactCreatePageState extends State<ContactCreatePage> {
               ),
               InkWell(
                 onTap: () async {
+                  String contactNameTrimed = controllerContactName.text.trim();
+                  String contacNumberTrimed =
+                      controllerContactNumber.text.trim();
+                  String contactEmailTrimed =
+                      controllerContactEmail.text.trim();
+
                   if (widget.fromUpdate == false) {
-                    if (controllerContactName.text.trim().isNotEmpty &&
-                        controllerContactNumber.text.trim().isNotEmpty &&
-                        controllerContactEmail.text.trim().isNotEmpty) {
+                    if (contactNameTrimed.isNotEmpty &&
+                        contacNumberTrimed.isNotEmpty &&
+                        contactEmailTrimed.isNotEmpty) {
                       if (_image != null) {
-                        uploadImage(_image.path, _image.readAsBytesSync(),
-                            context, false);
+                        contactServices.uploadImage(
+                            _image.path,
+                            _image.readAsBytesSync(),
+                            context,
+                            false,
+                            widget,
+                            contactNameTrimed,
+                            contacNumberTrimed,
+                            contactEmailTrimed,
+                            _image);
                       } else {
-                        var data = await createContact(null, false);
+                        var data = await contactServices.createContact(
+                            null,
+                            false,
+                            contactNameTrimed,
+                            contacNumberTrimed,
+                            contactEmailTrimed,
+                            widget.contact);
                         if (data == true) {
-                          Fluttertoast.showToast(
-                              msg: "Tebrikler ürün başarıyla eklendi",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 4,
-                              backgroundColor: Colors.green[700],
-                              textColor: Colors.white,
-                              fontSize: 16.0);
-                          //   Navigator.of(context).pop(true);
-                          print("veri başarıyla eklendi");
-                          await Future.delayed(Duration(milliseconds: 350));
+                          commonWidgets.customToast(
+                              "Congratulations contact added successfully",
+                              Colors.greenAccent[700]);
                           Navigator.of(context).pop(true);
                         } else {
-                          print("veri eklerken hata");
+                          print("data added error");
                         }
                       }
                     } else {
-                      Fluttertoast.showToast(
-                          msg: "Alanlar Boş Olamaz",
-                          toastLength: Toast.LENGTH_SHORT,
-                          gravity: ToastGravity.BOTTOM,
-                          timeInSecForIosWeb: 4,
-                          backgroundColor: Colors.redAccent[700],
-                          textColor: Colors.white,
-                          fontSize: 16.0);
+                      commonWidgets.customToast(
+                          "Fields cannot be empty", Colors.redAccent[700]);
                     }
                   } else {
-                    if (_image != null) {
-                      uploadImage(
-                          _image.path, _image.readAsBytesSync(), context, true);
-                    } else {
-                      var data = await createContact(null, true);
-                      if (data == true) {
-                        Fluttertoast.showToast(
-                            msg: "Tebrikler ürün başarıyla güncellendi",
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                            timeInSecForIosWeb: 4,
-                            backgroundColor: Colors.green[700],
-                            textColor: Colors.white,
-                            fontSize: 16.0);
-                        //   Navigator.of(context).pop(true);
-                        print("veri başarıyla güncellendi");
-                        await Future.delayed(Duration(milliseconds: 350));
-                        Navigator.of(context).pop(true);
+                    if (widget.contact.avatar != null) {
+                      if (_image != null) {
+                        print("image null degil güncellenecek");
+                        contactServices.uploadImage(
+                            _image.path,
+                            _image.readAsBytesSync(),
+                            context,
+                            true,
+                            widget,
+                            contactNameTrimed,
+                            contacNumberTrimed,
+                            contactEmailTrimed,
+                            _image);
                       } else {
-                        print("veri eklerken hata");
+
+                        var data = await contactServices.createContact(
+                            widget.contact.avatar,
+                            true,
+                            contactNameTrimed,
+                            contacNumberTrimed,
+                            contactEmailTrimed,
+                            widget.contact);
+                        if (data == true) {
+                          commonWidgets.customToast(
+                              "Congratulations contact added successfully",
+                              Colors.greenAccent[700]);
+
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/mainPage', (Route<dynamic> route) => false);
+                        } else {
+                          print("data added error");
+                        }
+                      }
+                    } else {
+                      if (_image != null) {
+                        contactServices.uploadImage(
+                            _image.path,
+                            _image.readAsBytesSync(),
+                            context,
+                            true,
+                            widget,
+                            contactNameTrimed,
+                            contacNumberTrimed,
+                            contactEmailTrimed,
+                            _image);
+                      } else {
+                        var data = await contactServices.createContact(
+                            null,
+                            true,
+                            contactNameTrimed,
+                            contacNumberTrimed,
+                            contactEmailTrimed,
+                            widget.contact);
+                        if (data == true) {
+                          commonWidgets.customToast(
+                              "Congratulations contact added successfully",
+                              Colors.greenAccent[700]);
+
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/mainPage', (Route<dynamic> route) => false);
+                        } else {
+                          print("data added error");
+                        }
                       }
                     }
                   }
@@ -264,60 +283,6 @@ class _ContactCreatePageState extends State<ContactCreatePage> {
     );
   }
 
-  createContact(Avatar avatar, bool fromUpdate) async {
-    Map<String, String> headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-    if (!fromUpdate) {
-      var url = Uri.parse('$SERVERURL/contacts');
-      Contact contact = Contact(
-          name: controllerContactName.text.trim(),
-          num: controllerContactNumber.text.trim(),
-          avatar: avatar,
-          email: controllerContactEmail.text.trim());
-
-      var response = await http.post(
-        url,
-        headers: headers,
-        body: jsonEncode(contact.toJson()),
-      );
-
-      if (response.statusCode == 200) {
-        print("veriler eklendi");
-        print(response.body);
-        return true;
-      } else {
-        print('Request failed with status: ${response.statusCode}.');
-
-        return false;
-      }
-    } else {
-      var url = Uri.parse('$SERVERURL/contacts/${widget.contact.id}');
-      Contact contact = Contact(
-          name: controllerContactName.text.trim(),
-          num: controllerContactNumber.text.trim(),
-          avatar: avatar,
-          email: controllerContactEmail.text.trim());
-
-      var response = await http.put(
-        url,
-        headers: headers,
-        body: jsonEncode(contact.toJson()),
-      );
-
-      if (response.statusCode == 200) {
-        print("veriler eklendi");
-        print(response.body);
-        return true;
-      } else {
-        print('Request failed with status: ${response.statusCode}.');
-
-        return false;
-      }
-    }
-  }
-
   getImageFromCamera(context) async {
     final pickedFile = await picker.getImage(source: ImageSource.camera);
 
@@ -344,211 +309,58 @@ class _ContactCreatePageState extends State<ContactCreatePage> {
     Navigator.of(context).pop();
   }
 
-  Future<Avatar> uploadImage(String imageFilePath, Uint8List imageBytes,
-      BuildContext context, bool fromUpdate) async {
-    if (fromUpdate == false) {
-      Avatar avatar = Avatar();
-
-      String url = SERVERURL + "/upload/";
-      PickedFile imageFile = PickedFile(imageFilePath);
-      var stream =
-          new http.ByteStream(DelegatingStream.typed(imageFile.openRead()));
-
-      var uri = Uri.parse(url);
-      int length = imageBytes.length;
-      var request = new http.MultipartRequest("POST", uri);
-      var multipartFile = new http.MultipartFile('files', stream, length,
-          filename: basename(imageFile.path),
-          contentType: MediaType('image', 'png'));
-
-      request.files.add(multipartFile);
-      var response = await request.send();
-
-      print("response avatar kodları");
-
-      print(response.statusCode);
-      print("dolamadan once avatar");
-      print(avatar.id);
-      response.stream.transform(utf8.decoder).listen((value) async {
-        print("gelen değerler createden");
-
-        String gelendata = value;
-        print(gelendata);
-
-        var fromList = avatarfromlist(gelendata);
-        avatar = fromList[0];
-        print("dolan avatar");
-        print(avatar.id);
-        var gelenDatam = await createContact(avatar, false);
-        if (gelenDatam != null) {
-          print("avatar null degil");
-          if (gelenDatam == true) {
-            Fluttertoast.showToast(
-                msg: "Tebrikler ürün başarıyla eklendi",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-                timeInSecForIosWeb: 4,
-                backgroundColor: Colors.green[700],
-                textColor: Colors.white,
-                fontSize: 16.0);
-            //   Navigator.of(context).pop(true);
-            print("veri başarıyla eklendi");
-            await Future.delayed(Duration(milliseconds: 350));
-            Navigator.of(context).pop(true);
-          } else {
-            print("veri eklerken hata upload image");
-          }
-        }
-      });
-    } else {
-      Map<String, String> headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-      String updateImageurl = SERVERURL + "/upload/";
-      Avatar avatar = Avatar();
-
-      if (widget.contact.avatar != null) {
-        String deleteImageurl =
-            SERVERURL + "/upload/files/${widget.contact.avatar.id}";
-        print(deleteImageurl);
-        print("update image url");
-        var deleteImageResponse =
-            await http.delete(Uri.parse(deleteImageurl), headers: headers);
-
-        if (deleteImageResponse.statusCode == 200) {
-          PickedFile imageFile = PickedFile(imageFilePath);
-          print("görsel yolu alındı");
-          var stream =
-              new http.ByteStream(DelegatingStream.typed(imageFile.openRead()));
-          print("görsel okundu");
-
-          var uri = Uri.parse(updateImageurl);
-          print("uri parse edildi");
-          int length = imageBytes.length;
-          var request = new http.MultipartRequest("POST", uri);
-
-          var multipartFile = new http.MultipartFile('files', stream, length,
-              filename: basename(imageFile.path),
-              contentType: MediaType('image', 'png'));
-          print("mdei type veridi");
-          print(imageFile.path);
-          print("image file pathi üsttü yazıldı");
-
-          // request.fields.addAll({
-          //   "field":"avatar",
-          //   "refId":"${widget.contact.id.toString()}",
-          //   "ref":"contacts"
-          // });
-
-          request.files.add(multipartFile);
-          var response = await request.send();
-
-          print(response.statusCode);
-          response.stream.transform(utf8.decoder).listen((value) async {
-            print("gelen eğerler upadateden");
-            print("görsel yüklendi");
-            print(value);
-            String gelendata = value;
-            print(gelendata);
-
-            var fromList = avatarfromlist(gelendata);
-            avatar = fromList[0];
-            var gelenDatam = await createContact(avatar, true);
-            if (gelenDatam != null) {
-              print("avatar null degil");
-              if (gelenDatam == true) {
-                Fluttertoast.showToast(
-                    msg: "Tebrikler ürün başarıyla güncellendi",
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    timeInSecForIosWeb: 4,
-                    backgroundColor: Colors.green[700],
-                    textColor: Colors.white,
-                    fontSize: 16.0);
-                //   Navigator.of(context).pop(true);
-                print("veri başarıyla güncellendi");
-                await Future.delayed(Duration(milliseconds: 350));
-                Navigator.of(context).pop(true);
-              } else {
-                print("veri eklerken hata upload image");
-              }
-            }
-          });
-        } else {
-          print(
-              "silinirken güncelleme sırasında hata  ${deleteImageResponse.statusCode}");
-        }
-      } else {
-        PickedFile imageFile = PickedFile(imageFilePath);
-        print("görsel yolu alındı");
-        var stream =
-            new http.ByteStream(DelegatingStream.typed(imageFile.openRead()));
-        print("görsel okundu");
-
-        var uri = Uri.parse(updateImageurl);
-        print("uri parse edildi");
-        int length = imageBytes.length;
-        var request = new http.MultipartRequest("POST", uri);
-
-        var multipartFile = new http.MultipartFile('files', stream, length,
-            filename: basename(imageFile.path),
-            contentType: MediaType('image', 'png'));
-        print("mdei type veridi");
-        print(imageFile.path);
-        print("image file pathi üsttü yazıldı");
-
-        // request.fields.addAll({
-        //   "field":"avatar",
-        //   "refId":"${widget.contact.id.toString()}",
-        //   "ref":"contacts"
-        // });
-
-        request.files.add(multipartFile);
-        var response = await request.send();
-
-        print(response.statusCode);
-        response.stream.transform(utf8.decoder).listen((value) async {
-          print("gelen eğerler upadateden");
-          print("görsel yüklendi");
-          print(value);
-          String gelendata = value;
-          print(gelendata);
-
-          var fromList = avatarfromlist(gelendata);
-          avatar = fromList[0];
-          var gelenDatam = await createContact(avatar, true);
-          if (gelenDatam != null) {
-            print("avatar null degil");
-            if (gelenDatam == true) {
-              Fluttertoast.showToast(
-                  msg: "Tebrikler ürün başarıyla güncellendi",
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                  timeInSecForIosWeb: 4,
-                  backgroundColor: Colors.green[700],
-                  textColor: Colors.white,
-                  fontSize: 16.0);
-              //   Navigator.of(context).pop(true);
-              print("veri başarıyla güncellendi");
-              await Future.delayed(Duration(milliseconds: 350));
-              Navigator.of(context).pop(true);
-            } else {
-              print("veri eklerken hata upload image");
-            }
-          }
-        });
-      }
-    }
-  }
 
   imageWidgetAta() {
-    if (widget.fromUpdate && _image != null) {
-      return FileImage(_image);
-    } else if (widget.fromUpdate == false) {
-      return NetworkImage("http://10.0.2.2:1337/uploads/" +
-          widget.contact.avatar.hash +
-          ".jpg");
+    if (widget.fromUpdate == true) {
+      if (widget.contact.avatar != null) {
+        if (_image != null) {
+          return Image(
+            image: FileImage(_image),
+            height: 120,
+            width: 120,
+            fit: BoxFit.cover,
+          );
+        } else {
+          return Image(
+            image: NetworkImage("http://10.0.2.2:1337/uploads/" +
+                widget.contact.avatar.hash +
+                ".jpg"),
+            height: 120,
+            width: 120,
+            fit: BoxFit.cover,
+          );
+        }
+      } else {
+        if (_image != null) {
+          return Image(
+            image: FileImage(_image),
+            height: 120,
+            width: 120,
+            fit: BoxFit.cover,
+          );
+        } else {
+          return Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 50,
+          );
+        }
+      }
+    } else {
+      if (_image != null) {
+        return Image(
+          image: FileImage(_image),
+          height: 120,
+          width: 120,
+          fit: BoxFit.cover,
+        );
+      } else {
+        return Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 50,
+        );
+      }
     }
   }
 }

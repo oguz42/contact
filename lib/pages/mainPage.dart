@@ -1,7 +1,7 @@
 import 'package:contacts/model/contact_model.dart';
 import 'package:contacts/pages/contactDetail.dart';
+import 'package:contacts/services/contactServices.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:page_transition/page_transition.dart';
 
 import 'contactCreatePage.dart';
@@ -12,6 +12,8 @@ class ContactsUserMainPage extends StatefulWidget {
 }
 
 class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
+  ContactServices contactServices = ContactServices();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,7 +27,9 @@ class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
           onPressed: () {
             Navigator.of(context)
                 .push(MaterialPageRoute(
-                    builder: (context) => ContactCreatePage(fromUpdate: false,)))
+                    builder: (context) => ContactCreatePage(
+                          fromUpdate: false,
+                        )))
                 .then((value) async => {
                       if (value == true)
                         {
@@ -53,7 +57,9 @@ class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
               onTap: () {
                 Navigator.of(context)
                     .push(MaterialPageRoute(
-                        builder: (context) => ContactCreatePage(fromUpdate: false,)))
+                        builder: (context) => ContactCreatePage(
+                              fromUpdate: false,
+                            )))
                     .then((value) async => {
                           if (value == true)
                             {
@@ -87,7 +93,7 @@ class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
               ),
             ),
             FutureBuilder(
-                future: getContacts(),
+                future: contactServices.getContacts(),
                 builder: (BuildContext context, AsyncSnapshot snaphsot) {
                   if (snaphsot.hasData) {
                     List<Contact> contact = snaphsot.data;
@@ -107,20 +113,24 @@ class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
                                       onTap: () {
                                         Navigator.of(context)
                                             .push(PageTransition(
-                                          child: ContactDetailPage(
-                                            contact: oneContact,
-                                          ),
-                                          duration: Duration(milliseconds: 210),
-                                          type: PageTransitionType.rightToLeft,
-                                        )).then((value) async => {
-                                          if(value==true){
-                                            await Future.delayed(Duration(milliseconds: 400)),
-                                            setState(() {})
-                                          }
-
-
-
-                                        });
+                                              child: ContactDetailPage(
+                                                contact: oneContact,
+                                              ),
+                                              duration:
+                                                  Duration(milliseconds: 210),
+                                              type: PageTransitionType
+                                                  .rightToLeft,
+                                            ))
+                                            .then((value) async => {
+                                                  if (value == true)
+                                                    {
+                                                      await Future.delayed(
+                                                          Duration(
+                                                              milliseconds:
+                                                                  400)),
+                                                      setState(() {})
+                                                    }
+                                                });
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.only(
@@ -130,20 +140,20 @@ class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
                                             ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(50),
-                                              child:
-                                                  oneContact.avatar == null
-                                                      ? Icon(
-                                                          Icons.account_circle,
-                                                          color: Colors.grey[800],
-                                                          size: 62,
-                                                        )
-                                                      : Image(
-                                                          height: 58,
-                                                          width: 58,
-                                                          image: NetworkImage(
-                                                              thumbCreate(oneContact)),
-                                                          fit: BoxFit.cover,
-                                                        ),
+                                              child: oneContact.avatar == null
+                                                  ? Icon(
+                                                      Icons.account_circle,
+                                                      color: Colors.grey[800],
+                                                      size: 62,
+                                                    )
+                                                  : Image(
+                                                      height: 58,
+                                                      width: 58,
+                                                      image: NetworkImage(
+                                                          thumbCreate(
+                                                              oneContact)),
+                                                      fit: BoxFit.cover,
+                                                    ),
                                             ),
                                             SizedBox(
                                               width: 20,
@@ -187,48 +197,15 @@ class _ContactsUserMainPageState extends State<ContactsUserMainPage> {
     );
   }
 
-  getContacts() async {
-    Map<String, String> headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-
-    print("get contact calıstı");
-    var url = Uri.parse('http://10.0.2.2:1337/contacts');
-
-    //Uri.parse('http://10.0.2.2:1337/products');
-    var response = await http.get(url, headers: headers);
-    if (response.statusCode == 200) {
-      var jsonString = response.body;
-      List<Contact> contact = contactFromJson(jsonString);
-      return contact.reversed.toList();
-    } else {
-      print('Request failed with status: ${response.statusCode}.');
-
-      return null;
-    }
-  }
-
   String thumbCreate(Contact oneContact) {
-    if(oneContact.avatar.formats.medium!=null){
+    if (oneContact.avatar.formats.medium != null) {
       return "http://10.0.2.2:1337/uploads/" +
-          oneContact
-              .avatar
-              .formats
-              .medium
-              .hash +
+          oneContact.avatar.formats.medium.hash +
           ".jpg";
-    }else{
+    } else {
       return "http://10.0.2.2:1337/uploads/" +
-          oneContact
-              .avatar
-              .formats
-              .thumbnail
-              .hash +
+          oneContact.avatar.formats.thumbnail.hash +
           ".jpg";
     }
-
-
   }
-
 }
